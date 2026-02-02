@@ -16,13 +16,15 @@ const app = express();
 app.use(helmet());
 app.use(morgan('dev'));
 
-// CORS - hỗ trợ nhiều origin (phân cách bằng dấu phẩy)
+// CORS - nhiều origin: CLIENT_ORIGIN phân cách bằng dấu phẩy
+// cors middleware chỉ trả về ĐÚNG MỘT origin khớp request, không gửi cả chuỗi
 const originEnv = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const allowedOrigins = originEnv.split(',').map((o) => o.trim()).filter(Boolean);
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin) return cb(null, true); // allow no-origin (curl, Postman)
+      if (allowedOrigins.includes(origin)) return cb(null, origin); // trả về ĐÚNG 1 origin
       cb(null, false);
     },
     methods: ['GET', 'POST', 'OPTIONS'],
