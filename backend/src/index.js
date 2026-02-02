@@ -16,11 +16,15 @@ const app = express();
 app.use(helmet());
 app.use(morgan('dev'));
 
-// CORS
-const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+// CORS - hỗ trợ nhiều origin (phân cách bằng dấu phẩy)
+const originEnv = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const allowedOrigins = originEnv.split(',').map((o) => o.trim()).filter(Boolean);
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(null, false);
+    },
     methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true
   })
