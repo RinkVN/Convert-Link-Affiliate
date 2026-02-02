@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { DotPattern } from "@/components/aceternity/DotPattern";
 import { GridPattern } from "@/components/aceternity/GridPattern";
 import { AppHeader } from "@/components/AppHeader";
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   useEffect(() => {
     setSubId(loadLocalSubId());
 
-    axios
+    api
       .get<{ data: HistoryItem[] }>("/api/convert/recent?limit=10")
       .then((resp) => {
         if (Array.isArray(resp.data?.data)) {
@@ -37,7 +37,7 @@ const App: React.FC = () => {
       })
       .catch(() => {});
 
-    axios
+    api
       .get<{ data: TopProduct[] }>("/api/top-products")
       .then((resp) => {
         if (Array.isArray(resp.data?.data) && resp.data.data.length > 0) {
@@ -69,7 +69,7 @@ const App: React.FC = () => {
       };
       if (subId.trim()) payload.subId = subId.trim();
 
-      const resp = await axios.post<{ id: string; affiliateUrl: string }>(
+      const resp = await api.post<{ id: string; affiliateUrl: string }>(
         "/api/convert",
         payload
       );
