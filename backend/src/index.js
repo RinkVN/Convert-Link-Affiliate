@@ -16,21 +16,24 @@ const app = express();
 app.use(helmet());
 app.use(morgan('dev'));
 
-// CORS - nhiều origin: CLIENT_ORIGIN phân cách bằng dấu phẩy
-// cors middleware chỉ trả về ĐÚNG MỘT origin khớp request, không gửi cả chuỗi
-const originEnv = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const allowedOrigins = originEnv.split(',').map((o) => o.trim()).filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // allow no-origin (curl, Postman)
-      if (allowedOrigins.includes(origin)) return cb(null, origin); // trả về ĐÚNG 1 origin
-      cb(null, false);
-    },
-    methods: ['GET', 'POST', 'OPTIONS'],
-    credentials: true
-  })
-);
+// CORS - allowlist: 1 cho dev, 1 cho prod
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN_DEV,
+  process.env.CLIENT_ORIGIN_PROD,
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    // Cho phép request không có Origin (curl, server-to-server)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // Body parser
 app.use(express.json());
