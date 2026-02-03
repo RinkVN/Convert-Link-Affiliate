@@ -7,8 +7,12 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { connectDb } from './config/db.js';
-import convertRouter from './routes/convert.js';
+import { loadShopeeDatafeed } from './services/shopeeDatafeed.js';
+import convertRouter, { renderLinkHandler } from './routes/convert.js';
 import topProductsRouter from './routes/topProducts.js';
+import eventsRouter from './routes/events.js';
+import adminRouter from './routes/admin.js';
+import redirectRouter from './routes/redirect.js';
 
 const app = express();
 
@@ -49,7 +53,11 @@ const convertLimiter = rateLimit({
 });
 
 app.use('/api/convert', convertLimiter, convertRouter);
+app.get('/render-link', convertLimiter, renderLinkHandler);
 app.use('/api/top-products', topProductsRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/r', redirectRouter);
 
 // Simple health check
 app.get('/health', (req, res) => {
@@ -71,6 +79,7 @@ const PORT = process.env.PORT || 4000;
 async function start() {
   try {
     await connectDb();
+    await loadShopeeDatafeed();
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });

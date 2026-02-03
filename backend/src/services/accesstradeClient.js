@@ -119,6 +119,74 @@ export async function createTrackingLink({ originalUrl, normalizedUrl, subId }) 
   }
 }
 
+/**
+ * Lấy tỷ lệ hoa hồng của campaign (default.sales_ratio %).
+ * GET /v1/commission_policies?camp_id=...
+ */
+export async function getCommissionRatio(campaignId) {
+  const apiToken = process.env.ACCESSTRADE_API_TOKEN?.trim();
+  const baseUrl = process.env.ACCESSTRADE_BASE_URL || DEFAULT_BASE_URL;
+  if (!apiToken || !campaignId) return null;
+
+  const url = `${baseUrl}/v1/commission_policies?camp_id=${encodeURIComponent(campaignId)}`;
+  try {
+    const response = await axios.get(url, {
+      headers: { 'Content-Type': 'application/json', Authorization: `Token ${apiToken}` },
+      timeout: 8000
+    });
+    const data = response.data;
+    const defaultRow =
+      data?.data?.default?.[0] ||
+      data?.default?.[0] ||
+      (Array.isArray(data?.default) ? data.default[0] : null);
+    if (defaultRow != null) {
+      const ratio = defaultRow.sales_ratio;
+      if (typeof ratio === 'number' && ratio >= 0) return ratio;
+      if (typeof ratio === 'string') return parseFloat(ratio) || null;
+    }
+    return null;
+  } catch (err) {
+    console.warn('[ACCESSTRADE] getCommissionRatio failed:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Lấy chi tiết sản phẩm (price, discount, name) từ ACCESSTRADE.
+ * GET /v1/product_detail?merchant=shopee&product_id=...
+ * Thử nhiều format product_id cho Shopee: shopid_itemid, shopid--itemid, shopid-itemid
+ */
+export async function getProductDetail(merchant, productIdVariants) {
+  const apiToken = process.env.ACCESSTRADE_API_TOKEN?.trim();
+  const baseUrl = process.env.ACCESSTRADE_BASE_URL || DEFAULT_BASE_URL;
+  if (!apiToken || !merchant) return null;
+  const ids = Array.isArray(productIdVariants) ? productIdVariants : [productIdVariants];
+  if (ids.length === 0 || !ids[0]) return null;
+
+  for (const productId of ids) {
+    const url = `${baseUrl}/v1/product_detail?merchant=${encodeURIComponent(merchant)}&product_id=${encodeURIComponent(productId)}`;
+    try {
+      const response = await axios.get(url, {
+        headers: { 'Content-Type': 'application/json', Authorization: `Token ${apiToken}` },
+        timeout: 8000
+      });
+      const data = response.data;
+      if (data && typeof data === 'object' && (data.price != null || data.discount != null)) {
+        return {
+          name: data.name,
+          price: data.price,
+          discount: data.discount,
+          image: data.image,
+          link: data.link
+        };
+      }
+    } catch (err) {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function getTopProducts({ dateFrom, dateTo, merchant } = {}) {
   const apiToken = process.env.ACCESSTRADE_API_TOKEN?.trim();
   const baseUrl = process.env.ACCESSTRADE_BASE_URL || DEFAULT_BASE_URL;

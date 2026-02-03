@@ -57,3 +57,36 @@ export function getClientIp(req) {
   );
 }
 
+/**
+ * Trích shopId và itemId từ URL Shopee.
+ * Ví dụ: shopee.vn/product/200790122/43272241138 -> { shopId: '200790122', itemId: '43272241138' }
+ * Hoặc: shopee.vn/...-i.200790122.43272241138 -> idem
+ * Hoặc query: ?shop_id=...&item_id=...
+ */
+export function parseShopeeProductFromUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    const path = url.pathname;
+
+    const productMatch = path.match(/\/product\/(\d+)\/(\d+)/);
+    if (productMatch) {
+      return { shopId: productMatch[1], itemId: productMatch[2] };
+    }
+
+    const iMatch = path.match(/-i\.(\d+)\.(\d+)/);
+    if (iMatch) {
+      return { shopId: iMatch[1], itemId: iMatch[2] };
+    }
+
+    const itemId = url.searchParams.get('item_id') || url.searchParams.get('itemid');
+    const shopId = url.searchParams.get('shop_id') || url.searchParams.get('shopid');
+    if (itemId && /^\d+$/.test(itemId)) {
+      return { shopId: shopId && /^\d+$/.test(shopId) ? shopId : '0', itemId };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
