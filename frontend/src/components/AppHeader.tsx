@@ -28,12 +28,15 @@ export function AppHeader({ subId, onSubIdChange }: Props) {
   return (
     <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <a href="/" className="text-lg font-semibold text-stone-900">
-          Mua sắm hoàn tiền
+        <a
+          href="/"
+          className="flex items-center gap-2 text-lg font-semibold text-stone-900"
+        >
+          <img src="/logo.jpg" alt="Mua sắm hoàn tiền" className="h-8 w-8" />
+          <span>Mua sắm hoàn tiền</span>
         </a>
 
         <div className="relative flex items-center gap-2" ref={popoverRef}>
-       
           <button
             type="button"
             onClick={() => setSettingsOpen(!settingsOpen)}
