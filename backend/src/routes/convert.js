@@ -99,18 +99,29 @@ async function performConvert(originalUrl, subId, req) {
     }
   }
 
+  // Thông tin cơ bản từ CSV (hiển thị lên UI kể cả khi chưa tính được hoa hồng)
+  if (productDetail) {
+    productInfo = {
+      productName: productDetail.name,
+      price: productDetail.price,
+      discount: productDetail.discount,
+      image: productDetail.image
+    };
+  }
+
+  // Bổ sung thông tin hoa hồng nếu tính được
   if (salePrice != null && typeof commissionRate === 'number' && commissionRate >= 0) {
     const estimatedCommission = Math.round((salePrice * commissionRate) / 100);
     productInfo = {
-      productName: productDetail?.name,
-      price: productDetail?.price,
-      discount: productDetail?.discount,
-      image: productDetail?.image,
+      ...(productInfo || {}),
       commissionRate,
       estimatedCommission
     };
   } else if (typeof commissionRate === 'number' && commissionRate >= 0) {
-    productInfo = { commissionRate };
+    productInfo = {
+      ...(productInfo || {}),
+      commissionRate
+    };
   }
 
   return {
