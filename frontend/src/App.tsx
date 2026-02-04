@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [originalUrl, setOriginalUrl] = useState("");
   const [subId, setSubId] = useState("");
   const [affiliateUrl, setAffiliateUrl] = useState("");
+  const [shortLink, setShortLink] = useState<string | undefined>();
   const [clickTrackingUrl, setClickTrackingUrl] = useState<
     string | undefined
   >();
@@ -47,6 +48,47 @@ const App: React.FC = () => {
   const [showShopPromo, setShowShopPromo] = useState(true);
 
   useSessionTracking();
+
+  const isShopeeUrl = (urlString: string) => {
+    try {
+      const url = new URL(urlString);
+      const host = url.hostname.toLowerCase();
+      return (
+        host === "shopee.vn" ||
+        host.endsWith(".shopee.vn") ||
+        host === "vn.shp.ee" ||
+        host === "s.shopee.vn"
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const isLazadaUrl = (urlString: string) => {
+    try {
+      const url = new URL(urlString);
+      const host = url.hostname.toLowerCase();
+      return host === "lazada.vn" || host.endsWith(".lazada.vn");
+    } catch {
+      return false;
+    }
+  };
+
+  const isTiktokUrl = (urlString: string) => {
+    try {
+      const url = new URL(urlString);
+      const host = url.hostname.toLowerCase();
+      return (
+        host === "vt.tiktok.com" ||
+        host === "tiktok.com" ||
+        host === "www.tiktok.com" ||
+        host === "shop.tiktok.com" ||
+        host.endsWith(".tiktok.com")
+      );
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     setSubId(loadLocalSubId());
@@ -83,20 +125,20 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     setAffiliateUrl("");
+    setShortLink(undefined);
     setClickTrackingUrl(undefined);
     setProductInfo(null);
 
     try {
       if (subId) saveLocalSubId(subId);
 
-      const payload: { originalUrl: string; subId?: string } = {
-        originalUrl: originalUrl.trim(),
-      };
-      if (subId.trim()) payload.subId = subId.trim();
+      const trimmedUrl = originalUrl.trim();
+      const trimmedSub = subId.trim();
 
-      const resp = await api.post<{
+      type ConvertResponse = {
         id: string;
         affiliateUrl: string;
+        shortLink?: string;
         clickTrackingUrl?: string;
         productInfo?: {
           commissionRate?: number;
@@ -106,17 +148,57 @@ const App: React.FC = () => {
           productName?: string;
           image?: string;
         };
-      }>("/api/convert", payload);
+      };
+
+      let resp;
+
+      if (isShopeeUrl(trimmedUrl)) {
+        const payload: { originalUrl: string; subId?: string } = {
+          originalUrl: trimmedUrl,
+        };
+        if (trimmedSub) payload.subId = trimmedSub;
+
+        resp = await api.post<ConvertResponse>("/api/convert", payload);
+      } else if (isTiktokUrl(trimmedUrl)) {
+        const payload: {
+          product_url: string;
+          sub1?: string;
+        } = {
+          product_url: trimmedUrl,
+        };
+        if (trimmedSub) payload.sub1 = trimmedSub;
+
+        resp = await api.post<ConvertResponse>(
+          "/api/tiktokshop/create-link",
+          payload
+        );
+      } else if (isLazadaUrl(trimmedUrl)) {
+        const payload: { originalUrl: string; subId?: string } = {
+          originalUrl: trimmedUrl,
+        };
+        if (trimmedSub) payload.subId = trimmedSub;
+
+        resp = await api.post<ConvertResponse>(
+          "/api/lazada/convert",
+          payload
+        );
+      } else {
+        setError(
+          "URL phải là link Shopee, TikTok / TikTok Shop hoặc Lazada hợp lệ."
+        );
+        return;
+      }
 
       setAffiliateUrl(resp.data.affiliateUrl);
+      setShortLink(resp.data.shortLink);
       setClickTrackingUrl(resp.data.clickTrackingUrl);
       setProductInfo(resp.data.productInfo ?? null);
 
       const newItem: HistoryItem = {
         id: resp.data.id,
-        originalUrl: originalUrl.trim(),
+        originalUrl: trimmedUrl,
         affiliateUrl: resp.data.affiliateUrl,
-        subId: subId.trim(),
+        subId: trimmedSub,
         createdAt: new Date().toISOString(),
       };
 
@@ -137,9 +219,10 @@ const App: React.FC = () => {
   };
 
   const handleCopy = async () => {
-    if (!affiliateUrl) return;
+    const linkToCopy = shortLink || affiliateUrl;
+    if (!linkToCopy) return;
     try {
-      await navigator.clipboard.writeText(affiliateUrl);
+      await navigator.clipboard.writeText(linkToCopy);
       setToast({
         type: "success",
         message: "Đã copy affiliate link vào clipboard!",
@@ -182,6 +265,7 @@ const App: React.FC = () => {
           {affiliateUrl && (
             <ResultCard
               affiliateUrl={affiliateUrl}
+              shortLink={shortLink}
               clickTrackingUrl={clickTrackingUrl}
               productInfo={productInfo ?? undefined}
               onCopy={handleCopy}

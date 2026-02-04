@@ -5,7 +5,8 @@ import {
   isShopeeUrl,
   normalizeUrl,
   getClientIp,
-  parseShopeeProductFromUrl
+  parseShopeeProductFromUrl,
+  generateShortId
 } from '../utils/urlUtils.js';
 import { createTrackingLink, getCommissionRatio } from '../services/accesstradeClient.js';
 import { getProductFromDatafeed } from '../services/shopeeDatafeed.js';
@@ -54,14 +55,34 @@ async function performConvert(originalUrl, subId, req) {
   const ip = getClientIp(req);
   const userAgent = req.headers['user-agent'];
 
+  // Tạo shortId unique
+  let shortId;
+  let attempts = 0;
+  do {
+    shortId = generateShortId();
+    const existing = await Link.findOne({ shortId }).lean();
+    if (!existing) break;
+    attempts++;
+    if (attempts > 10) {
+      // Fallback: dùng _id nếu không tạo được shortId sau 10 lần
+      shortId = undefined;
+      break;
+    }
+  } while (true);
+
   const linkDoc = await Link.create({
     originalUrl,
     normalizedUrl,
     affiliateUrl,
+    shortId,
     subId,
     ip,
     userAgent
   });
+
+  // Tạo short link từ domain của user
+  const shortLinkDomain = process.env.SHORT_LINK_DOMAIN || 'hoantien.shopbnh.vn';
+  const shortLink = shortId ? `https://${shortLinkDomain}/s/${shortId}` : undefined;
 
   const apiBase = process.env.API_BASE_URL || '';
   const clickTrackingUrl = apiBase ? `${apiBase.replace(/\/$/, '')}/r/${linkDoc._id}` : undefined;
@@ -127,6 +148,7 @@ async function performConvert(originalUrl, subId, req) {
   return {
     id: linkDoc._id.toString(),
     affiliateUrl,
+    shortLink: shortLink || affiliateUrl,
     clickTrackingUrl: clickTrackingUrl || linkDoc.affiliateUrl,
     productInfo: productInfo || undefined
   };
