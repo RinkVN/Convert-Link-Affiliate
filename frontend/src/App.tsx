@@ -20,6 +20,7 @@ import {
   saveLocalHistory,
 } from "@/lib/storage";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
+import { Helmet } from "react-helmet-async";
 
 const App: React.FC = () => {
   const [originalUrl, setOriginalUrl] = useState("");
@@ -161,6 +162,10 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-stone-50/80 text-stone-900 antialiased">
+      <Helmet>
+        <link rel="canonical" href="https://hoantien.shopbnh.vn/" />
+      </Helmet>
+
       <DotPattern className="opacity-60" />
       <GridPattern className="opacity-40" />
 
