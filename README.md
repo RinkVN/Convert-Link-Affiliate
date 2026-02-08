@@ -36,7 +36,6 @@ Server mặc định chạy ở `http://localhost:4000`.
 #### 1.2. API chính
 
 - **POST** `/api/convert`
-
   - **Body JSON**:
     - `originalUrl` (string, bắt buộc): link Shopee gốc (`shopee.vn`, `vn.shp.ee`, `s.shopee.vn`).
     - `subId` (string, tùy chọn): sẽ map sang `sub1` trong ACCESSTRADE API.
@@ -148,3 +147,13 @@ Vite sẽ chạy ở `http://localhost:5173` và proxy `/api` sang backend `http
   - Tất cả token, campaign id đọc từ `.env` trong backend.
 - **MongoDB collection `links`**:
   - Trường: `originalUrl`, `normalizedUrl`, `affiliateUrl`, `subId`, `ip`, `userAgent`, `createdAt`.
+
+### 4. Coupon Search (Meilisearch)
+
+Tìm kiếm coupon qua Meilisearch với typo tolerance, prefix search, synonyms.
+
+- **Yêu cầu**: Chạy Meilisearch (Docker: `docker run -d -p 7700:7700 getmeili/meilisearch:latest`)
+- **Cấu hình**: Thêm `MEILISEARCH_HOST=http://127.0.0.1:7700` vào `.env`
+- **Sync**: Tự động sau mỗi lần cron sync coupon (12h). Hoặc `POST /api/admin/sync-meilisearch` (x-admin-secret)
+- **API**: `GET /api/search?q=...&page=1&limit=20`
+- **Chi tiết**: Xem `backend/docs/SEARCH_ENGINE.md`
